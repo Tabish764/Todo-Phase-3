@@ -1,0 +1,9 @@
+# ESLint ignore patterns
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+coverage/
+*.min.js
+.env*
