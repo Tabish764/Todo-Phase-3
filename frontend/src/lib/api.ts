@@ -10,7 +10,7 @@ class ApiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://todo-phase-ii.onrender.com';
   }
 
   private async getAuthHeaders(): Promise<Record<string, string>> {

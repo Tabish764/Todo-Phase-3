@@ -14,7 +14,7 @@ export const auth = betterAuth({
     },
   }),
   secret: process.env.BETTER_AUTH_SECRET || "your-32-char-secret-here-make-it-secure",
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  baseURL: process.env.BETTER_AUTH_URL || "https://todo-phase-ii.vercel.app",
   emailAndPassword: {
     enabled: true,
   },
