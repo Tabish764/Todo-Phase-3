@@ -12,7 +12,7 @@ class Settings:
     BETTER_AUTH_URL: str = os.getenv("BETTER_AUTH_URL", "http://localhost:3000")
     CORS_ORIGINS: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    GOOGLE_AI_API_KEY: str = os.getenv("GOOGLE_AI_API_KEY", "")
+    GOOGLE_AI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
     @property
     def openai_api_key(self) -> str:

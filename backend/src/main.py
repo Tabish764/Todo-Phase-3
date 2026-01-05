@@ -1,5 +1,4 @@
 import logging
-import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,24 +68,12 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # -----------------------------
 # CORS configuration
 # -----------------------------
-# Get CORS origins from environment or use defaults
-cors_origins_env = os.getenv("CORS_ORIGINS", "")
-if cors_origins_env:
-    # Split by comma and strip whitespace
-    cors_origins = [origin.strip() for origin in cors_origins_env.split(",")]
-else:
-    # Default origins for development and production
-    cors_origins = [
-        "http://localhost:3000",
-        "https://todo-phase-3.vercel.app",
-        "https://www.todo-phase-3.vercel.app",  # Vercel sometimes uses www subdomain
-    ]
-
-logger.info(f"CORS allowed origins: {cors_origins}")
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=[
+        "http://localhost:3000","https://todo-phase-3.vercel.app"  # Frontend origin(s)
+        # Add other origins if needed
+    ],
     allow_credentials=True,  # Required for cookies or auth headers
     allow_methods=["*"],
     allow_headers=["*"],

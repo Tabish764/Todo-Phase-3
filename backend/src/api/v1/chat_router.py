@@ -33,7 +33,7 @@ async def chat_endpoint(
         raise InvalidRequestError("Request body is required", field="request_body")
 
     conversation_service = ConversationService(session)
-    ai_agent_service = AIAgentService(api_key=settings.openai_api_key)
+    ai_agent_service = AIAgentService(api_key=settings.google_ai_api_key)
     
     conversation_id = chat_request.conversation_id
     user_message = chat_request.message
