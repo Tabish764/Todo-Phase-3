@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional
-from src.models.task import Task
+from src.database.models import Task
 
 
 class InMemoryTaskDB:

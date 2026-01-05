@@ -211,8 +211,12 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 - Python + FastAPI (006-better-auth-integration)
 - PostgreSQL (006-better-auth-integration)
 - Better Auth (006-better-auth-integration)
+- Python 3.12 + google-generativeai, openai (010-ai-agent-gemini)
+- FastAPI + SQLModel + Pydantic (010-ai-agent-gemini)
 
 ## Recent Changes
+- 010-ai-agent-gemini: Added Python 3.12 + google-generativeai, openai
+- 010-ai-agent-gemini: Added FastAPI + SQLModel + Pydantic
 - 006-better-auth-integration: Added TypeScript + Next.js
 - 006-better-auth-integration: Added Python + FastAPI
 - 006-better-auth-integration: Added PostgreSQL
@@ -220,4 +224,4 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
 
-**Last updated**: 2025-12-17
+**Last updated**: 2025-12-27

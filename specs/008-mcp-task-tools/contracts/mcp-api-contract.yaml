@@ -1,0 +1,326 @@
+# API Contract: MCP Server with Task Management Tools
+
+## Overview
+This document defines the API contracts for the MCP server with 5 standardized tools for AI agents to interact with the task management system.
+
+## Base URL
+```
+http://localhost:8000
+```
+
+## Authentication
+All MCP tools require authentication via user_id parameter in the input, which is validated against the system.
+
+## Endpoints
+
+### GET /mcp/tools
+Get list of all available MCP tools with their schemas.
+
+#### Response 200 OK
+```json
+{
+  "tools": [
+    {
+      "name": "add_task",
+      "description": "Create a new task for the user",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Who owns this task"
+          },
+          "title": {
+            "type": "string",
+            "description": "Task title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Additional task details",
+            "nullable": true
+          }
+        },
+        "required": ["user_id", "title"],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "description": "ID of created task"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["created"]
+          },
+          "title": {
+            "type": "string",
+            "description": "Echo back the title"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Echo back the description"
+          }
+        },
+        "required": ["task_id", "status", "title"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_tasks",
+      "description": "Retrieve tasks with optional filtering by completion status",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Whose tasks to retrieve"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["all", "pending", "completed"],
+            "default": "all",
+            "description": "Filter by completion status"
+          }
+        },
+        "required": ["user_id"],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "completed": {
+                  "type": "boolean"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": ["id", "title", "completed", "created_at", "updated_at"],
+              "additionalProperties": false
+            }
+          },
+          "count": {
+            "type": "integer",
+            "description": "Total number of tasks returned"
+          }
+        },
+        "required": ["tasks", "count"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "complete_task",
+      "description": "Mark a specific task as completed",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Who owns the task"
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "Which task to complete"
+          }
+        },
+        "required": ["user_id", "task_id"],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "description": "Echo back the task ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["completed"]
+          },
+          "title": {
+            "type": "string",
+            "description": "The task's title"
+          }
+        },
+        "required": ["task_id", "status", "title"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "delete_task",
+      "description": "Permanently remove a task from the database",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Who owns the task"
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "Which task to delete"
+          }
+        },
+        "required": ["user_id", "task_id"],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "description": "Echo back the task ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["deleted"]
+          },
+          "title": {
+            "type": "string",
+            "description": "The deleted task's title"
+          }
+        },
+        "required": ["task_id", "status", "title"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "update_task",
+      "description": "Modify a task's title or description",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Who owns the task"
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "Which task to update"
+          },
+          "title": {
+            "type": "string",
+            "description": "New task title"
+          },
+          "description": {
+            "type": "string",
+            "description": "New task description"
+          }
+        },
+        "required": ["user_id", "task_id"],
+        "minProperties": 3,
+        "maxProperties": 4,
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "description": "Echo back the task ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["updated"]
+          },
+          "title": {
+            "type": "string",
+            "description": "The updated title"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "The updated description"
+          }
+        },
+        "required": ["task_id", "status", "title"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
+```
+
+---
+
+### POST /mcp/tools/{tool_name}
+Execute a specific MCP tool.
+
+#### Path Parameters
+- `tool_name`: One of "add_task", "list_tasks", "complete_task", "delete_task", "update_task"
+
+#### Request
+```json
+{
+  // Tool-specific input based on the tool's input_schema
+}
+```
+
+#### Response 200 OK
+```json
+{
+  // Tool-specific output based on the tool's output_schema
+}
+```
+
+#### Error Responses
+- 400: Bad Request - Invalid input parameters
+- 401: Unauthorized - User not authorized for the operation
+- 404: Not Found - Tool or task not found
+- 422: Unprocessable Entity - Input validation failed
+
+## Common Error Format
+All error responses follow this format:
+```json
+{
+  "error": {
+    "type": "string",
+    "message": "string",
+    "details": "object (optional)"
+  }
+}
+```
+
+## Data Models
+
+### Task
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| id | integer | Yes | Unique identifier |
+| user_id | string | Yes | ID of the user who owns the task |
+| title | string | Yes | Task title |
+| description | string | No | Additional task details |
+| completed | boolean | Yes | Completion status |
+| created_at | string (date-time) | Yes | When the task was created |
+| updated_at | string (date-time) | Yes | When the task was last updated |
+
+### Tool Schema
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | string | Yes | Tool name |
+| description | string | Yes | Tool purpose |
+| input_schema | object | Yes | JSON schema for input validation |
+| output_schema | object | Yes | JSON schema for output validation |

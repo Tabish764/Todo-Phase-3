@@ -1,0 +1,243 @@
+# AI Agent Integration Contract
+
+## Component: AI Agent Service
+
+### Interface: process_message
+
+**Description**: Main interface for processing user messages through the AI agent with MCP tool integration.
+
+**Input Parameters**:
+- `user_id` (string, required): The ID of the requesting user
+- `message` (string, required): User's natural language message
+- `conversation_history` (array of MessageContext, optional): Previous conversation messages for context
+- `user_preferences` (object, optional): User preferences that might affect agent behavior
+
+**Input Schema**:
+```json
+{
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "The ID of the requesting user",
+      "minLength": 1
+    },
+    "message": {
+      "type": "string",
+      "description": "User's natural language message",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "conversation_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["system", "user", "assistant"]
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["role", "content"]
+      }
+    },
+    "user_preferences": {
+      "type": "object",
+      "description": "User preferences that might affect agent behavior"
+    }
+  },
+  "required": ["user_id", "message"]
+}
+```
+
+**Success Response**:
+```json
+{
+  "content": "I've added 'Buy groceries' to your task list!",
+  "tool_calls": [
+    {
+      "tool_name": "add_task",
+      "arguments": {
+        "user_id": "user123",
+        "title": "Buy groceries"
+      },
+      "result": {
+        "task_id": 5,
+        "status": "created",
+        "title": "Buy groceries"
+      }
+    }
+  ],
+  "confidence": 0.95
+}
+```
+
+**Response Schema**:
+```json
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "The agent's natural language response"
+    },
+    "tool_calls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tool_name": {
+            "type": "string",
+            "description": "Name of the MCP tool called"
+          },
+          "arguments": {
+            "type": "object",
+            "description": "Arguments passed to the tool"
+          },
+          "result": {
+            "type": "object",
+            "description": "Result returned by the tool"
+          }
+        },
+        "required": ["tool_name", "arguments", "result"]
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence level in the response (optional)"
+    }
+  },
+  "required": ["content"]
+}
+```
+
+**Error Responses**:
+
+#### 400 Bad Request - Invalid Input
+```json
+{
+  "error": "INVALID_INPUT",
+  "message": "Message cannot be empty",
+  "details": {
+    "field": "message",
+    "constraint": "non_empty"
+  }
+}
+```
+
+#### 401 Unauthorized - Invalid User
+```json
+{
+  "error": "UNAUTHORIZED",
+  "message": "User not found or unauthorized",
+  "details": {
+    "field": "user_id",
+    "constraint": "exists"
+  }
+}
+```
+
+#### 503 Service Unavailable - Gemini API Unavailable
+```json
+{
+  "error": "SERVICE_UNAVAILABLE",
+  "message": "AI service temporarily unavailable",
+  "details": {
+    "component": "gemini_api",
+    "reason": "rate_limited_or_down"
+  }
+}
+```
+
+#### 500 Internal Server Error - Processing Error
+```json
+{
+  "error": "PROCESSING_ERROR",
+  "message": "Failed to process AI request",
+  "details": {
+    "component": "ai_agent",
+    "reason": "processing_failed"
+  }
+}
+```
+
+### Interface: register_mcp_tools
+
+**Description**: Register MCP tools with the AI agent for function calling.
+
+**Input Parameters**:
+- `tools` (array of ToolDefinition, required): List of MCP tools to register with the agent
+
+**Input Schema**:
+```json
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name of the MCP tool"
+      },
+      "description": {
+        "type": "string",
+        "description": "Purpose of the tool"
+      },
+      "parameters": {
+        "type": "object",
+        "description": "JSON schema for tool parameters"
+      },
+      "required": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Required parameter names"
+      }
+    },
+    "required": ["name", "description", "parameters"]
+  }
+}
+```
+
+**Success Response**:
+- Status: 200 OK
+- Body: `{ "success": true, "registered_tools": 5 }`
+
+### Interface: get_agent_status
+
+**Description**: Check the status of the AI agent service.
+
+**Input Parameters**: None
+
+**Success Response**:
+```json
+{
+  "status": "healthy",
+  "model": "gemini-pro",
+  "connected_tools": 5,
+  "last_updated": "2025-12-27T10:00:00Z"
+}
+```
+
+**Performance Requirements**:
+- Response time: < 5 seconds for single-tool interactions
+- Response time: < 8 seconds for multi-tool interactions
+- Handle concurrent requests without data corruption
+- Maintain conversation context across multiple turns
+
+### Implementation Notes
+- All MCP tools must be registered before the agent can use them
+- The agent must receive full conversation history on each invocation (stateless)
+- Tool results must be incorporated into natural language responses
+- User privacy must be maintained - no user data should be shared with AI provider beyond what's necessary for task completion

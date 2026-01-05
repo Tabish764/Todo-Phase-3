@@ -10,6 +10,8 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@ai-sdk/react": "^3.0.3",
+    "ai": "^6.0.3",
     "better-auth": "^1.4.7",
     "cookies-next": "^6.1.1",
     "drizzle-kit": "^0.31.8",

@@ -1,42 +1,34 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-from pydantic import BaseModel, field_validator
-from uuid import UUID, uuid4
+from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, String, DateTime, Boolean, Integer
 
+class Task(SQLModel, table=True):
+    """Task model for database storage - maps to 'task' table in Neon"""
+    __table_args__ = {"extend_existing": True}
+    id: Optional[int] = Field(default=None, primary_key=True)
 
-class Task(BaseModel):
-    id: str
-    title: str
+    # Use sa_column to explicitly map to camelCase 'userId'
+    userid: str = Field(
+        sa_column=Column("userId", String, index=True, nullable=False)
+    )
+
+    title: str = Field(min_length=1, max_length=200)
     description: Optional[str] = None
-    completed: bool = False
-    created_at: datetime
-    updated_at: datetime
+    completed: bool = Field(default=False)
 
-    @field_validator('title')
-    def validate_title(cls, v):
-        if not v or len(v) < 1 or len(v) > 200:
-            raise ValueError('Title must be between 1 and 200 characters')
-        return v
+    # Use sa_column to explicitly map to camelCase 'createdAt'
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column("createdAt", DateTime(timezone=True))
+    )
 
-    @classmethod
-    def create(cls, title: str, description: Optional[str] = None):
-        now = datetime.now()
-        return cls(
-            id=str(uuid4()),
-            title=title,
-            description=description,
-            completed=False,
-            created_at=now,
-            updated_at=now
+    # Use sa_column to explicitly map to camelCase 'updatedAt'
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(
+            "updatedAt", 
+            DateTime(timezone=True), 
+            onupdate=lambda: datetime.now(timezone.utc)
         )
-
-    def update(self, title: Optional[str] = None, description: Optional[str] = None, completed: Optional[bool] = None):
-        now = datetime.now()
-        if title is not None:
-            self.title = title
-        if description is not None:
-            self.description = description
-        if completed is not None:
-            self.completed = completed
-        self.updated_at = now
-        return self
+    )

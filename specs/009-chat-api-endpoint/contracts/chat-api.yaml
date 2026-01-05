@@ -1,0 +1,177 @@
+# Chat API Contract
+
+## Endpoint: POST /api/{user_id}/chat
+
+### Description
+Receives chat messages from the frontend, orchestrates AI agent interactions with MCP tools, persists conversation data to the database, and returns responses to the client.
+
+### Path Parameters
+- `user_id` (string, required): The ID of the requesting user
+
+### Request Body
+```json
+{
+  "conversation_id": 123,
+  "message": "Add a task to buy groceries"
+}
+```
+
+#### Request Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "integer",
+      "description": "Existing conversation to continue (optional)"
+    },
+    "message": {
+      "type": "string",
+      "description": "User's natural language message (required)",
+      "minLength": 1
+    }
+  },
+  "required": ["message"],
+  "additionalProperties": false
+}
+```
+
+### Success Response (200 OK)
+```json
+{
+  "conversation_id": 123,
+  "response": "I've added 'Buy groceries' to your task list!",
+  "tool_calls": [
+    {
+      "tool_name": "add_task",
+      "arguments": {
+        "user_id": "user123",
+        "title": "Buy groceries"
+      },
+      "result": {
+        "task_id": 5,
+        "status": "created",
+        "title": "Buy groceries"
+      }
+    }
+  ]
+}
+```
+
+#### Response Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "integer",
+      "description": "The conversation ID (new or existing)"
+    },
+    "response": {
+      "type": "string",
+      "description": "AI assistant's natural language response"
+    },
+    "tool_calls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tool_name": {
+            "type": "string",
+            "description": "Name of the MCP tool called"
+          },
+          "arguments": {
+            "type": "object",
+            "description": "Arguments passed to the tool"
+          },
+          "result": {
+            "type": "object",
+            "description": "Result returned by the tool"
+          }
+        },
+        "required": ["tool_name", "arguments", "result"]
+      }
+    }
+  },
+  "required": ["conversation_id", "response"],
+  "additionalProperties": false
+}
+```
+
+### Error Responses
+
+#### 400 Bad Request - Invalid Request
+```json
+{
+  "error": "INVALID_REQUEST",
+  "message": "Message cannot be empty",
+  "details": {
+    "field": "message",
+    "constraint": "non_empty"
+  }
+}
+```
+
+#### 401 Unauthorized - Invalid User
+```json
+{
+  "error": "UNAUTHORIZED",
+  "message": "User not found or unauthorized",
+  "details": {
+    "field": "user_id",
+    "constraint": "exists"
+  }
+}
+```
+
+#### 404 Not Found - Conversation Not Found
+```json
+{
+  "error": "NOT_FOUND",
+  "message": "Conversation not found",
+  "details": {
+    "field": "conversation_id",
+    "constraint": "exists"
+  }
+}
+```
+
+#### 403 Forbidden - User Access Violation
+```json
+{
+  "error": "FORBIDDEN",
+  "message": "Access to conversation denied",
+  "details": {
+    "field": "conversation_id",
+    "constraint": "user_access"
+  }
+}
+```
+
+#### 503 Service Unavailable - Database Unavailable
+```json
+{
+  "error": "SERVICE_UNAVAILABLE",
+  "message": "Service temporarily unavailable",
+  "details": {
+    "component": "database",
+    "reason": "unavailable"
+  }
+}
+```
+
+### Security Requirements
+- Path parameter `user_id` is used for authorization
+- No authentication tokens required in this design (user_id in path serves as identifier)
+
+### Performance Requirements
+- Response time: < 10 seconds for 99.9% of requests
+- Concurrent requests: Support at least 100 concurrent requests
+
+### Implementation Notes
+- Stateless: No server-side session storage
+- All conversation history retrieved from database on each request
+- User message stored before AI processing
+- AI response stored after processing
+- MCP tools called during AI processing
+- Conversation updated_at timestamp updated on each request

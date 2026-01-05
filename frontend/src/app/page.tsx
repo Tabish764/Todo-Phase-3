@@ -141,6 +141,12 @@ export default function Home() {
               <p className="text-gray-400 text-lg mt-2">Organize your life in style</p>
             </div>
             <div className="flex items-center gap-4">
+              <Link
+                href="/chat"
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium flex items-center gap-2"
+              >
+                💬 Chat Assistant
+              </Link>
               <span className="text-gray-300 text-sm">
                 {user?.email}
               </span>

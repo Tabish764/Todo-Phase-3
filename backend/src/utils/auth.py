@@ -1,6 +1,5 @@
 import jwt
-from jwt import PyJWKClient
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 import os
 from datetime import datetime
 import logging
@@ -8,6 +7,22 @@ from functools import lru_cache
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import requests
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
+from uuid import UUID
+
+# Try to import PyJWKClient - it's optional and may not be available
+try:
+    from jose import PyJWKClient
+    JWKS_AVAILABLE = True
+except ImportError:
+    try:
+        from jwt import PyJWKClient
+        JWKS_AVAILABLE = True
+    except ImportError:
+        JWKS_AVAILABLE = False
+        PyJWKClient = None
+
 # Set up logger for authentication events
 logger = logging.getLogger(__name__)
 
@@ -16,13 +31,17 @@ security = HTTPBearer()
 
 
 @lru_cache(maxsize=1)
-def get_jwk_client() -> PyJWKClient:
+def get_jwk_client():
     """
     Get a cached PyJWKClient for JWKS verification.
 
     The client fetches public keys from Better Auth's JWKS endpoint
     and caches them for efficient verification.
     """
+    if not JWKS_AVAILABLE:
+        logger.warning("PyJWKClient not available. JWKS verification will not work.")
+        return None
+    
     # Better Auth JWKS endpoint
     jwks_url = f"{os.getenv('BETTER_AUTH_URL', 'http://localhost:3000')}/.well-known/jwks.json"
 
@@ -67,21 +86,34 @@ class JWTUtil:
 
     def verify_token(self, token: str) -> Dict[str, Any]:
         """
-        Verify JWT token using JWKS and return the payload
+        Verify JWT token using JWKS (if available) or HMAC secret
         """
         try:
-            # Get JWKS client and signing key
+            # Try JWKS verification first if available
             jwk_client = get_jwk_client()
-            signing_key = jwk_client.get_signing_key_from_jwt(token)
-
-            # Verify and decode the JWT
-            # Better Auth uses EdDSA (Ed25519) or RS256 by default
-            payload = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=["EdDSA", "RS256", "HS256"],  # Adding HS256 as fallback
-                options={"verify_aud": False}  # Better Auth doesn't use audience claim
-            )
+            if jwk_client is not None:
+                try:
+                    signing_key = jwk_client.get_signing_key_from_jwt(token)
+                    # Verify and decode the JWT using JWKS
+                    payload = jwt.decode(
+                        token,
+                        signing_key.key,
+                        algorithms=["EdDSA", "RS256", "HS256"],
+                        options={"verify_aud": False}
+                    )
+                except Exception as jwks_error:
+                    logger.debug(f"JWKS verification failed, falling back to HMAC: {str(jwks_error)}")
+                    # Fall through to HMAC verification
+                    jwk_client = None
+            
+            # Fall back to HMAC verification if JWKS is not available or failed
+            if jwk_client is None:
+                payload = jwt.decode(
+                    token,
+                    self.secret,
+                    algorithms=["HS256"],
+                    options={"verify_aud": False}
+                )
 
             # Extract user ID for logging
             # Better Auth tokens might have user ID in different locations
@@ -239,3 +271,69 @@ def extract_user_email(token_payload: Dict[str, Any]) -> Optional[str]:
         Optional[str]: User email if present, None otherwise
     """
     return token_payload.get("user", {}).get("email")
+
+
+async def verify_user_exists(db_session: AsyncSession, user_id: str) -> bool:
+    """
+    Verify if a user exists in the database.
+    
+    Args:
+        db_session: Async database session
+        user_id: User ID to check
+        
+    Returns:
+        bool: True if user exists, False otherwise
+    """
+    try:
+        from src.database.models import User
+        statement = select(User).where(User.id == user_id)
+        result = await db_session.exec(statement)
+        user = result.first()
+        return user is not None
+    except Exception as e:
+        logger.error(f"Error verifying user existence for user_id {user_id}: {str(e)}")
+        return False
+
+
+async def verify_user_owns_task(
+    db_session: AsyncSession, 
+    user_id: str, 
+    task_id: Union[int, str, UUID]
+) -> bool:
+    """
+    Verify if a user owns a specific task.
+    
+    Args:
+        db_session: Async database session
+        user_id: User ID to check
+        task_id: Task ID (can be int, str, or UUID)
+        
+    Returns:
+        bool: True if user owns the task, False otherwise
+    """
+    try:
+        from src.database.models import Task
+        # Convert task_id to UUID if needed
+        if isinstance(task_id, int):
+            try:
+                task_uuid = UUID(str(task_id))
+            except (ValueError, AttributeError):
+                return False
+        elif isinstance(task_id, str):
+            try:
+                task_uuid = UUID(task_id)
+            except ValueError:
+                return False
+        else:
+            task_uuid = task_id
+        
+        statement = select(Task).where(
+            Task.id == task_uuid,
+            Task.user_id == user_id
+        )
+        result = await db_session.exec(statement)
+        task = result.first()
+        return task is not None
+    except Exception as e:
+        logger.error(f"Error verifying task ownership for user_id {user_id}, task_id {task_id}: {str(e)}")
+        return False

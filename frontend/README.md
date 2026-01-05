@@ -47,6 +47,44 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 - `/signup` - User registration
 - `/login` - User login
 - `/tasks/[user_id]` - User-specific task management
+- `/chat` - AI chat interface
+
+### ChatKit Setup and Configuration
+
+This project uses OpenAI ChatKit via the `@ai-sdk/react` library for the chat interface. Here's how to set it up:
+
+#### Installation
+The following packages are already installed:
+- `@ai-sdk/react` - Provides the ChatKit components and hooks
+- `ai` - AI SDK utilities
+
+#### Environment Variables
+Add the following to your `.env.local` file:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_OPENAI_DOMAIN_KEY=your-domain-key-here  # Optional for localhost
+```
+
+#### Chat Features
+- Real-time chat interface with user and assistant messages
+- Tool call visualization for AI tool usage
+- Conversation persistence with history
+- Loading indicators during AI processing
+- Error handling with retry functionality
+- Mobile-responsive design
+
+### Domain Allowlist Setup (Production)
+
+For production deployment with OpenAI ChatKit, you need to configure domain allowlisting:
+
+1. Deploy frontend to production (Vercel, etc.)
+2. Get production URL: `https://your-app.vercel.app`
+3. Add domain to OpenAI: https://platform.openai.com/settings/organization/security/domain-allowlist
+4. Obtain domain key
+5. Set `NEXT_PUBLIC_OPENAI_DOMAIN_KEY` in production environment
+
+**Note**: Localhost works without domain allowlist during development.
 
 ## Learn More
 

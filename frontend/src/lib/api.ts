@@ -1,4 +1,5 @@
-import { authClient } from "./auth-client";
+import { getCookie, setCookie } from 'cookies-next';
+import { authClient } from './auth-client';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -10,7 +11,7 @@ class ApiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://todo-phase-ii.onrender.com';
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   }
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
@@ -21,39 +22,33 @@ class ApiClient {
       const raw = (await authClient.getSession()) as any;
       const session = raw?.data ?? raw;
 
-      console.log("Better Auth session in ApiClient.getAuthHeaders:", session);
-
-      // The session object from Better Auth should contain the session token
-      // in session.session.token (what you showed in your JSON dump)
+      // The session object from Better Auth should contain the JWT token
       if (session && session.session) {
-        const token =
-          session.session.token ||
-          session.session.accessToken ||
-          session.session.idToken ||
-          session.session.id;
+        // Better Auth typically stores the JWT token in different properties depending on the version
+        // Common locations: session.session.token, session.session.accessToken, session.session.idToken
+        // In many cases, the session.id IS the JWT token
+        const token = session.session.token ||
+                     session.session.accessToken ||
+                     session.session.idToken ||
+                     session.session.id;
 
         if (token) {
-          console.log(
-            "Found session token, sending in Authorization header (Bearer ...)"
-          );
-          return { Authorization: `Bearer ${token}` };
+          console.log('Found token in session, sending in Authorization header');
+          return { 'Authorization': `Bearer ${token}` };
         } else {
-          console.warn(
-            "No token-like value found on session.session. Full session:",
-            session
-          );
+          console.warn('No token found in session. Session data:', session);
+          // If no token found in session, we can still try with credentials
+          // This allows cookies to be sent with the request
+          console.warn('Sending request with credentials (cookies)');
+          return {};
         }
-      } else {
-        console.warn(
-          "No Better Auth session found when trying to build auth headers."
-        );
       }
     } catch (error) {
-      console.error("Failed to get auth session in ApiClient.getAuthHeaders:", error);
+      console.error('Failed to get auth session:', error);
     }
 
-    // If no session or no token found, return empty headers.
-    // The backend will respond with 401 and the UI can handle it.
+    // If no session or no token found, return empty headers
+    // The backend will handle the authentication failure appropriately
     return {};
   }
 
@@ -90,16 +85,6 @@ class ApiClient {
         return {
           success: false,
           error: errorData.detail || errorData.message || `HTTP error! status: ${response.status}`,
-        };
-      }
-
-      // Some endpoints (like DELETE /tasks) return 204 No Content.
-      // Calling response.json() on an empty body throws
-      // "Unexpected end of JSON input", so we special-case it.
-      if (response.status === 204) {
-        return {
-          success: true,
-          data: undefined as T,
         };
       }
 
@@ -145,6 +130,22 @@ class ApiClient {
   async deleteTask(userId: string, taskId: string): Promise<ApiResponse<null>> {
     return this.request<null>(`/${userId}/tasks/${taskId}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Conversation-related methods
+  async getConversations(userId: string, limit: number = 20, offset: number = 0): Promise<ApiResponse<any>> {
+    return this.request<any>(`/${userId}/conversations?limit=${limit}&offset=${offset}`);
+  }
+
+  async getConversation(userId: string, conversationId: number): Promise<ApiResponse<any>> {
+    return this.request<any>(`/${userId}/conversations/${conversationId}`);
+  }
+
+  async createConversation(userId: string, conversationData: any): Promise<ApiResponse<any>> {
+    return this.request<any>(`/${userId}/conversations`, {
+      method: 'POST',
+      body: JSON.stringify(conversationData),
     });
   }
 }

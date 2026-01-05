@@ -1,6 +1,6 @@
 import { Task } from '@/types/task';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://todo-phase-ii.onrender.com';
+const API_BASE_URL = "http://localhost:8000"
 
 interface ApiResponse<T> {
   data?: T;

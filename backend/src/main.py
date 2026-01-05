@@ -2,7 +2,13 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from src.api.v1.endpoints.tasks import router as tasks_router
+from src.api.v1.chat_router import router as chat_router
+from src.api.v1.conversation_router import router as conversation_router
+from src.api.v1.mcp_router import router as mcp_router
 from src.database.connection import db_connection
 
 # -----------------------------
@@ -42,6 +48,9 @@ async def lifespan(app: FastAPI):
         await db_connection.disconnect()
         logger.info("Database connection closed")
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # -----------------------------
 # FastAPI app
 # -----------------------------
@@ -52,13 +61,17 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Add rate limit handler to the app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # -----------------------------
 # CORS configuration
 # -----------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://todo-phase-ii.vercel.app",  # Frontend origin(s)
+        "http://localhost:3000"  # Frontend origin(s)
         # Add other origins if needed
     ],
     allow_credentials=True,  # Required for cookies or auth headers
@@ -70,6 +83,9 @@ app.add_middleware(
 # Include routers
 # -----------------------------
 app.include_router(tasks_router)
+app.include_router(chat_router, prefix="/api")  # Register chat router with /api prefix
+app.include_router(conversation_router)  # Conversation router at root level, like tasks
+app.include_router(mcp_router, prefix="/api/v1")
 
 # -----------------------------
 # Root endpoint
@@ -87,12 +103,14 @@ async def health_check():
     try:
         from sqlmodel import select
         from src.database.models import Task
-        from src.database.session import AsyncSessionLocal
+        from src.database.session import get_db_session
 
-        async with AsyncSessionLocal() as session:
+        # Use the get_db_session dependency to get a session
+        async for session in get_db_session():
             stmt = select(Task).limit(1)
             result = await session.execute(stmt)
             _ = result.scalar_one_or_none()
+            break  # We only need one session from the generator
 
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
