@@ -71,7 +71,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000"  # Frontend origin(s)
+        "http://localhost:3000","https://todo-phase-3.vercel.app"  # Frontend origin(s)
         # Add other origins if needed
     ],
     allow_credentials=True,  # Required for cookies or auth headers
