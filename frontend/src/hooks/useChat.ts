@@ -25,7 +25,7 @@ export function useChat() {
       const history = await conversationService.getConversationHistory(user.id, id);
 
       // Handle both array and object responses
-      const messagesArray = Array.isArray(history) ? history : (history?.messages || []);
+      const messagesArray = Array.isArray(history) ? history : (history as any)?.messages || [];
 
       // Convert API response to our Message format
       const chatMessages: Message[] = messagesArray.map((msg: any) => ({
