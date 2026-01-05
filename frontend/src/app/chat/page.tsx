@@ -3,7 +3,7 @@
 import { useAuth } from '@/lib/auth-client';
 import { useChat } from '@/hooks/useChat';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import ChatKitWrapper from '@/components/Chat/ChatKitWrapper';
 import ConversationSidebar from '@/components/Chat/ConversationSidebar';
 
@@ -31,7 +31,7 @@ const ErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return <>{children}</>;
 };
 
-export default function ChatPage() {
+function ChatPageContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,5 +89,13 @@ export default function ChatPage() {
         </div>
       </div>
     </ErrorBoundary>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen bg-black text-gray-100">Loading...</div>}>
+      <ChatPageContent />
+    </Suspense>
   );
 }
